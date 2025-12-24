@@ -1,6 +1,0 @@
----
-- name: Installer Docker sur la machine locale
-  hosts: localhost
-  become: yes
-  roles:
-    - docker

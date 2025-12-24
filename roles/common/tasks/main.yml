@@ -1,0 +1,20 @@
+---
+- name: Verifier la compatibilite Debian/Ubuntu
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: "Ce playbook est concu pour Debian/Ubuntu"
+    success_msg: "Systeme compatible: {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+- name: Installer les paquets communs
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Creer le dossier des keyrings APT
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"

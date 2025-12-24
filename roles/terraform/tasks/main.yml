@@ -1,0 +1,27 @@
+---
+- name: Ajouter la cle GPG HashiCorp
+  ansible.builtin.get_url:
+    url: "{{ terraform_gpg_url }}"
+    dest: "{{ terraform_keyring_path }}"
+    mode: "0644"
+
+- name: Ajouter le depot HashiCorp
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by={{ terraform_keyring_path }}] {{ terraform_repo_url }} {{ ansible_distribution_release }} main"
+    state: present
+    filename: hashicorp
+
+- name: Installer Terraform
+  ansible.builtin.apt:
+    name: "{{ terraform_package }}"
+    state: present
+    update_cache: true
+
+- name: Verifier Terraform
+  ansible.builtin.command: terraform -version
+  register: terraform_version
+  changed_when: false
+
+- name: Afficher la version Terraform
+  ansible.builtin.debug:
+    msg: "{{ terraform_version.stdout_lines }}"

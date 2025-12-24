@@ -1,0 +1,4 @@
+---
+toolbox_install:
+  docker: true
+  terraform: true

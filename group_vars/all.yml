@@ -1,0 +1,8 @@
+---
+toolbox_install:
+  docker: false
+  terraform: true
+
+toolbox_uninstall:
+  docker: false
+  terraform: true

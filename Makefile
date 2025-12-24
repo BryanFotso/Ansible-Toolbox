@@ -1,47 +1,40 @@
-# Makefile pour simplifier l'utilisation d'Ansible
+ANSIBLE ?= ansible-playbook
+ENV ?= local
+INVENTORY = inventory/$(ENV).ini
+PLAYBOOK_DIR = playbooks
+
+.PHONY: install site docker terraform uninstall check help
 
 install:
-	@echo "Installation des dépendances Ansible (si besoin)"
-	sudo apt update && sudo apt install ansible -y
+	@echo "Installation d'Ansible (Ubuntu/Debian)"
+	sudo apt update && sudo apt install -y ansible
 
-run:
-	@echo "Lancement du playbook Ansible pour installer Docker..."
-	ansible-playbook -i inventory playbook.yml --ask-become-pass
+site:
+	@echo "Lancement de la toolbox (ENV=$(ENV))"
+	$(ANSIBLE) -i $(INVENTORY) $(PLAYBOOK_DIR)/site.yml --ask-become-pass
 
-check:
-	@echo "Vérification de la syntaxe du playbook..."
-	ansible-playbook -i inventory playbook.yml --syntax-check
+docker:
+	@echo "Installation de Docker uniquement (ENV=$(ENV))"
+	$(ANSIBLE) -i $(INVENTORY) $(PLAYBOOK_DIR)/docker.yml --ask-become-pass
 
-test:
-	@echo "Test de Docker après installation..."
-	@docker --version && echo "✓ Docker est installé et fonctionnel" || echo "✗ Docker n'est pas accessible"
-	@docker compose version && echo "✓ Docker Compose est installé" || echo "✗ Docker Compose n'est pas accessible"
+terraform:
+	@echo "Installation de Terraform uniquement (ENV=$(ENV))"
+	$(ANSIBLE) -i $(INVENTORY) $(PLAYBOOK_DIR)/terraform.yml --ask-become-pass
 
 uninstall:
-	@echo "Désinstallation de Docker..."
-	ansible-playbook -i inventory uninstall.yml --ask-become-pass
+	@echo "Desinstallation des outils (ENV=$(ENV))"
+	$(ANSIBLE) -i $(INVENTORY) $(PLAYBOOK_DIR)/uninstall.yml --ask-become-pass
 
-add-user-to-docker:
-	@echo "Ajout de l'utilisateur courant au groupe docker..."
-	sudo usermod -aG docker $$USER
-	@echo " Utilisateur ajouté au groupe docker"
-	@echo "  Déconnectez-vous et reconnectez-vous pour que les changements prennent effet"
-
-check-docker-group:
-	@echo "Vérification de l'appartenance au groupe docker..."
-	@if groups $$USER | grep -q docker; then \
-		echo " L'utilisateur $$USER est déjà dans le groupe docker"; \
-	else \
-		echo "  L'utilisateur $$USER n'est PAS dans le groupe docker"; \
-		echo "  Utilisez 'make add-user-to-docker' pour l'ajouter"; \
-	fi
+check:
+	@echo "Verification de syntaxe"
+	$(ANSIBLE) -i $(INVENTORY) $(PLAYBOOK_DIR)/site.yml --syntax-check
 
 help:
 	@echo "Commandes disponibles :"
-	@echo "  make install             # Installe Ansible sur votre système (Ubuntu/Debian)"
-	@echo "  make check               # Vérifie la syntaxe du playbook Ansible"
-	@echo "  make run                 # Lance le playbook pour installer Docker et configurer l'utilisateur"
-	@echo "  make test                # Teste si Docker et Docker Compose fonctionnent après installation"
-	@echo "  make check-docker-group  # Vérifie si l'utilisateur est dans le groupe docker"
-	@echo "  make add-user-to-docker  # Ajoute manuellement l'utilisateur courant au groupe docker"
-	@echo "  make uninstall           # Désinstalle complètement Docker du système"
+	@echo "  make install          # Installe Ansible"
+	@echo "  make site             # Installe les outils actives dans group_vars"
+	@echo "  make docker           # Installe Docker uniquement"
+	@echo "  make terraform        # Installe Terraform uniquement"
+	@echo "  make uninstall        # Desinstalle selon toolbox_uninstall"
+	@echo "  ENV=prod make site    # Cible l'inventaire prod"
+	@echo "  make check            # Syntaxe du playbook"
