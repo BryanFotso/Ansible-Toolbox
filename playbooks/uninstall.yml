@@ -2,6 +2,9 @@
 - name: Desinstaller les outils de la toolbox
   hosts: all
   become: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/{{ toolbox_env }}.yml
   vars:
     docker_repo_url: "https://download.docker.com/linux/ubuntu"
     docker_keyring_path: "/etc/apt/keyrings/docker.asc"

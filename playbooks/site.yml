@@ -2,6 +2,9 @@
 - name: Installer la toolbox DevOps
   hosts: all
   become: true
+  vars_files:
+    - ../group_vars/all.yml
+    - ../group_vars/{{ toolbox_env }}.yml
   roles:
     - role: common
     - role: docker

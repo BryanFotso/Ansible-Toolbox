@@ -44,6 +44,9 @@ Pour l'environnement prod :
 ENV=prod make site
 ```
 
+Les variables d'environnement sont chargees via `toolbox_env` (defini dans
+`inventory/local.ini` ou `inventory/prod.ini`) et pointent vers `group_vars/<env>.yml`.
+
 ### Avec Ansible directement
 ```bash
 ansible-playbook -i inventory/local.ini playbooks/site.yml --ask-become-pass
