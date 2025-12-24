@@ -1,0 +1,10 @@
+---
+- name: Installer la toolbox DevOps
+  hosts: all
+  become: true
+  roles:
+    - role: common
+    - role: docker
+      when: toolbox_install.docker | default(false)
+    - role: terraform
+      when: toolbox_install.terraform | default(false)

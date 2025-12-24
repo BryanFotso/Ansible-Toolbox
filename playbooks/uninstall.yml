@@ -1,0 +1,75 @@
+---
+- name: Desinstaller les outils de la toolbox
+  hosts: all
+  become: true
+  vars:
+    docker_repo_url: "https://download.docker.com/linux/ubuntu"
+    docker_keyring_path: "/etc/apt/keyrings/docker.asc"
+    docker_apt_arch_map:
+      x86_64: amd64
+      aarch64: arm64
+      armv7l: armhf
+    docker_apt_arch: "{{ docker_apt_arch_map.get(ansible_architecture, 'amd64') }}"
+    docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    terraform_repo_url: "https://apt.releases.hashicorp.com"
+    terraform_keyring_path: "/etc/apt/keyrings/hashicorp.asc"
+    terraform_package: terraform
+  tasks:
+    - name: Arreter Docker
+      ansible.builtin.service:
+        name: docker
+        state: stopped
+        enabled: false
+      when: toolbox_uninstall.docker | default(false)
+      ignore_errors: true
+
+    - name: Supprimer Docker
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: absent
+        purge: true
+      when: toolbox_uninstall.docker | default(false)
+
+    - name: Supprimer le depot Docker
+      ansible.builtin.apt_repository:
+        repo: "deb [arch={{ docker_apt_arch }} signed-by={{ docker_keyring_path }}] {{ docker_repo_url }} {{ ansible_distribution_release }} stable"
+        state: absent
+        filename: docker
+      when: toolbox_uninstall.docker | default(false)
+
+    - name: Supprimer la cle Docker
+      ansible.builtin.file:
+        path: "{{ docker_keyring_path }}"
+        state: absent
+      when: toolbox_uninstall.docker | default(false)
+
+    - name: Supprimer Terraform
+      ansible.builtin.apt:
+        name: "{{ terraform_package }}"
+        state: absent
+        purge: true
+      when: toolbox_uninstall.terraform | default(false)
+
+    - name: Supprimer le depot HashiCorp
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by={{ terraform_keyring_path }}] {{ terraform_repo_url }} {{ ansible_distribution_release }} main"
+        state: absent
+        filename: hashicorp
+      when: toolbox_uninstall.terraform | default(false)
+
+    - name: Supprimer la cle HashiCorp
+      ansible.builtin.file:
+        path: "{{ terraform_keyring_path }}"
+        state: absent
+      when: toolbox_uninstall.terraform | default(false)
+
+    - name: Nettoyer les paquets inutiles
+      ansible.builtin.apt:
+        autoremove: true
+        autoclean: true
+      when: toolbox_uninstall.docker | default(false) or toolbox_uninstall.terraform | default(false)

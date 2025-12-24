@@ -1,79 +1,75 @@
-# Projet Ansible : Installation de Docker sur Linux
+# Ansible Toolbox (Docker, Terraform, ...)
 
-## Qu'est-ce qu'Ansible ?
-Ansible est un outil d'automatisation qui permet de configurer et gérer des serveurs facilement, sans avoir besoin d'installer un agent sur les machines cibles. On écrit des "playbooks" (scénarios) en YAML pour décrire ce qu'on veut faire.
+Ce depot fournit une toolbox Ansible pour installer plusieurs outils DevOps sur Ubuntu/Debian
+(local, VM, WSL). Chaque outil est encapsule dans un role, ce qui rend l'ensemble facile
+à etendre.
 
-## À quoi sert ce projet ?
-Ce projet automatise l'installation de Docker sur ta machine Linux (même si elle tourne sous Windows via WSL). Tu n'as pas besoin de connaître Ansible pour l'utiliser, il suffit de suivre les instructions.
+## Objectifs
+- 1 outil = 1 role Ansible
+- Un playbook global pour installer plusieurs outils conditionnellement
+- Configuration par environnement (local / prod)
+- Documentation simple pour debutants
 
-## Comment ça marche ?
-1. **Ansible lit l'inventaire** pour savoir sur quelle machine agir.
-2. **Il lit le playbook** pour savoir quoi faire (ici, installer Docker via le rôle `docker`).
-3. **Le rôle exécute les tâches** dans l'ordre :
-   - Installer les paquets nécessaires
-   - Ajouter la clé de sécurité Docker
-   - Ajouter le dépôt officiel Docker
-   - Installer Docker
-   - S'assurer que Docker démarre automatiquement
+## Structure du depot
+- `inventory/` : inventaires par environnement (`local.ini`, `prod.ini`)
+- `group_vars/` : variables globales et par environnement
+- `playbooks/` : playbooks d'entree (`site.yml`) et playbooks par outil
+- `roles/` : roles `common`, `docker`, `terraform`
+- `ansible.cfg`, `Makefile`, `.gitignore`, `README.md`
 
-## Structure
-- `playbook.yml` : Playbook principal pour installer Docker
-- `uninstall.yml` : Playbook pour désinstaller Docker complètement
-- `inventory` : Inventaire local (localhost)
-- `roles/docker/` : Rôle Ansible pour l'installation de Docker
-- `ansible.cfg` : Configuration Ansible pour améliorer l'expérience utilisateur
-- `Makefile` : Raccourcis pour simplifier l'utilisation
+## Prerequis
+- Ubuntu/Debian
+- Python 3
+- Acces sudo
 
-## Utilisation
+## Choisir les outils a installer
+Modifiez `group_vars/local.yml` ou `group_vars/prod.yml` :
 
-### Méthode recommandée (avec Makefile)
-1. Installe make si ce n'est pas déjà fait :
-   ```bash
-   sudo apt update && sudo apt install make -y
-   ```
-
-2. Installer Ansible (si besoin) :
-   ```bash
-   make install
-   ```
-
-3. Vérifier la syntaxe du playbook :
-   ```bash
-   make check
-   ```
-
-4. Lancer l'installation :
-   ```bash
-   make run
-   ```
-
-
-5. Tester l'installation :
-   ```bash
-   make test
-   ```
-
-6. Vérifier si l'utilisateur courant est dans le groupe docker :
-   ```bash
-   make check-docker-group
-   ```
-
-7. Ajouter manuellement l'utilisateur courant au groupe docker (si besoin) :
-   ```bash
-   make add-user-to-docker
-   ```
-
-## Désinstallation
-Pour supprimer complètement Docker :
-```bash
-make uninstall
+```yaml
+toolbox_install:
+  docker: true
+  terraform: false
 ```
 
-## Remarques
-- Ce playbook est prévu pour Ubuntu/Debian. Pour d'autres distributions, adaptez les tâches du rôle.
-- Testé sous WSL2 Ubuntu.
-- Après l'installation, déconnectez-vous/reconnectez-vous pour que l'ajout au groupe `docker` soit pris en compte.
+## Lancer l'installation
 
-## Pour aller plus loin
-- Tu peux adapter ce projet pour installer d'autres logiciels ou configurer plusieurs machines.
-- Consulte la doc officielle : https://docs.ansible.com/
+### Avec le Makefile (recommande)
+```bash
+make install
+make site
+```
+
+Pour l'environnement prod :
+```bash
+ENV=prod make site
+```
+
+### Avec Ansible directement
+```bash
+ansible-playbook -i inventory/local.ini playbooks/site.yml --ask-become-pass
+```
+
+### Installer un outil specifique
+```bash
+make docker
+make terraform
+```
+
+## Desinstallation
+Le playbook `playbooks/uninstall.yml` utilise `toolbox_uninstall` :
+
+```bash
+ansible-playbook -i inventory/local.ini playbooks/uninstall.yml --ask-become-pass \
+  -e '{"toolbox_uninstall":{"docker":true}}'
+```
+
+## Ajouter un nouvel outil
+1. Creer un nouveau role dans `roles/<outil>/`.
+2. Ajouter un playbook `playbooks/<outil>.yml`.
+3. Declarer l'outil dans `group_vars/all.yml`.
+4. Ajouter la condition dans `playbooks/site.yml`.
+5. (Optionnel) Ajouter une cible dans le `Makefile`.
+
+## Notes
+- Les roles utilisent les depots officiels (Docker et HashiCorp).
+- L'installation est idempotente : relancer un playbook est sans risque.

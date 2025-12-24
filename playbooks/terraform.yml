@@ -1,0 +1,7 @@
+---
+- name: Installer Terraform
+  hosts: all
+  become: true
+  roles:
+    - common
+    - terraform

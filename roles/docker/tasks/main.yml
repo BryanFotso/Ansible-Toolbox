@@ -1,84 +1,52 @@
 ---
-- name: Vérifier que le système est compatible (Ubuntu/Debian)
-  assert:
-    that:
-      - ansible_os_family == "Debian"
-    fail_msg: "Ce playbook est conçu pour Ubuntu/Debian uniquement"
-    success_msg: "Système compatible détecté : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+- name: Ajouter la cle GPG Docker
+  ansible.builtin.get_url:
+    url: "{{ docker_gpg_url }}"
+    dest: "{{ docker_keyring_path }}"
+    mode: "0644"
 
-- name: Installer les dépendances pour Docker
-  apt:
-    name:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - gnupg-agent
-      - software-properties-common
+- name: Ajouter le depot Docker
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ docker_apt_arch }} signed-by={{ docker_keyring_path }}] {{ docker_repo_url }} {{ ansible_distribution_release }} stable"
     state: present
-    update_cache: yes
+    filename: docker
 
-- name: Ajouter la clé GPG officielle de Docker
-  apt_key:
-    url: https://download.docker.com/linux/ubuntu/gpg
+- name: Installer Docker et plugins
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
     state: present
+    update_cache: true
+  notify: restart docker
 
-- name: Ajouter le dépôt Docker
-  apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
-    state: present
-
-- name: Installer Docker
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-      - docker-buildx-plugin
-      - docker-compose-plugin
-    state: latest
-    update_cache: yes
-
-- name: S'assurer que Docker est démarré
-  service:
+- name: S'assurer que Docker est demarre
+  ansible.builtin.service:
     name: docker
     state: started
-    enabled: yes
+    enabled: true
 
-- name: Vérifier que Docker fonctionne
-  command: docker --version
+- name: S'assurer que le groupe docker existe
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Ajouter l'utilisateur au groupe docker
+  ansible.builtin.user:
+    name: "{{ docker_user }}"
+    groups: docker
+    append: true
+
+- name: Verifier Docker
+  ansible.builtin.command: docker --version
   register: docker_version
   changed_when: false
 
-- name: Vérifier que Docker Compose fonctionne
-  command: docker-compose --version
+- name: Verifier Docker Compose
+  ansible.builtin.command: docker compose version
   register: docker_compose_version
   changed_when: false
-  failed_when: false
 
-- name: Vérifier que Docker Compose v2 fonctionne (si disponible)
-  command: docker compose version
-  register: docker_compose_v2_version
-  changed_when: false
-  failed_when: false
-
-- name: Afficher la version de Docker installée
-  debug:
-    msg: "Docker installé avec succès : {{ docker_version.stdout }}"
-
-- name: Afficher la version de Docker Compose installée
-  debug:
-    msg: "Docker Compose installé avec succès : {{ docker_compose_version.stdout }}"
-  when: docker_compose_version.rc == 0
-
-- name: Afficher la version de Docker Compose v2 installée
-  debug:
-    msg: "Docker Compose v2 installé avec succès : {{ docker_compose_v2_version.stdout }}"
-  when: docker_compose_v2_version.rc == 0
-
-- name: Information finale
-  debug:
-    msg: |
-      Installation terminée !
-      - Déconnectez-vous et reconnectez-vous pour utiliser Docker sans sudo
-      - Testez avec : docker --version
-      - Testez Docker Compose avec : docker-compose --version ou docker compose version
+- name: Afficher les versions installees
+  ansible.builtin.debug:
+    msg:
+      - "Docker: {{ docker_version.stdout }}"
+      - "Docker Compose: {{ docker_compose_version.stdout }}"
