@@ -1,8 +1,8 @@
 ---
 toolbox_install:
-  docker: false
+  docker: true
   terraform: true
 
 toolbox_uninstall:
-  docker: false
+  docker: true
   terraform: true
